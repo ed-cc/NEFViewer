@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  # ── macOS: full test suite (NEFParser + MetadataReader + ThumbnailCache) ──
+  test-macos:
+    name: Tests · macOS
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Run tests
+        run: swift test --parallel
+
+  # ── Linux: Foundation-only tests (NEFParser + MetadataReader) ─────────────
+  # ThumbnailCache is guarded by #if canImport(AppKit) and is skipped here.
+  test-linux:
+    name: Tests · Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "5.10"
+
+      - name: Run tests
+        run: swift test --parallel
