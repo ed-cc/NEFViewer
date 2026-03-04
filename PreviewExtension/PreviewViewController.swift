@@ -1,5 +1,5 @@
 import Cocoa
-import QuickLook
+import QuickLookUI
 import NEFViewerCore
 
 // Phase 6 — full implementation with metadata overlay and orientation correction.
