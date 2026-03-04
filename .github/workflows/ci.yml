@@ -16,8 +16,17 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
-      - name: Run tests
+      - name: Run Swift package tests
         run: swift test --parallel
+
+      - name: Build Xcode project (no code signing)
+        run: |
+          xcodebuild build \
+            -project NEFViewer.xcodeproj \
+            -scheme NEFViewer \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            | grep -E '^(Build|error:|warning:|CompileSwift|Ld )' || true
 
   # ── Linux: Foundation-only tests (NEFParser + MetadataReader) ─────────────
   # ThumbnailCache is guarded by #if canImport(AppKit) and is skipped here.
