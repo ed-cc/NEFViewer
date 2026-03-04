@@ -74,7 +74,7 @@ enum SyntheticNEF {
 
         d += beBytes(UInt16(2))
 
-        d += beIfdEntry(tag: 0x0112, type: 3, count: 1, value: UInt32(orientation))
+        d += beShortIfdEntry(tag: 0x0112, count: 1, value: orientation)
         d += beIfdEntry(tag: 0x014A, type: 4, count: 1, value: 38)
 
         d += beBytes(UInt32(0))
@@ -199,7 +199,15 @@ enum SyntheticNEF {
         bytes(tag) + bytes(type) + bytes(count) + bytes(value)
     }
 
+    /// 12-byte big-endian IFD entry for LONG (4-byte) values.
     private static func beIfdEntry(tag: UInt16, type: UInt16, count: UInt32, value: UInt32) -> Data {
         beBytes(tag) + beBytes(type) + beBytes(count) + beBytes(value)
+    }
+
+    /// 12-byte big-endian IFD entry for SHORT (2-byte) values.
+    /// Per TIFF spec, a SHORT stored in the 4-byte value field is left-justified
+    /// in the file's byte order: [hi, lo, 0x00, 0x00] for big-endian.
+    private static func beShortIfdEntry(tag: UInt16, count: UInt32, value: UInt16) -> Data {
+        beBytes(tag) + beBytes(UInt16(3)) + beBytes(count) + beBytes(value) + beBytes(UInt16(0))
     }
 }
