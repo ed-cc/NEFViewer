@@ -24,7 +24,7 @@
 	<array>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.nikon.nef</string>
+			<string>com.nikon.raw-image</string>
 			<key>UTTypeDescription</key>
 			<string>Nikon NEF Raw Image</string>
 			<key>UTTypeConformsTo</key>

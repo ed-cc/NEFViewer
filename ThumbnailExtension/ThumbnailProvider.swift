@@ -1,10 +1,11 @@
 import QuickLookThumbnailing
 import AppKit
 import NEFViewerCore
+import os.log
 
-// Phase 5 — full implementation with cache integration.
-// This stub is wired end-to-end: it extracts the embedded JPEG from any NEF
-// file (lossless, HE★, HE) via a ranged read of ~1–2 MB.
+private let logger = Logger(subsystem: "com.nefviewer.app.ThumbnailExtension",
+                            category: "ThumbnailProvider")
+
 class ThumbnailProvider: QLThumbnailProvider {
 
     override func provideThumbnail(
@@ -12,30 +13,53 @@ class ThumbnailProvider: QLThumbnailProvider {
         _ handler: @escaping (QLThumbnailReply?, Error?) -> Void
     ) {
         let fileURL = request.fileURL
-        let maxSize = request.maximumSize
+        let scale = request.scale
+        let maxPixel = max(request.maximumSize.width, request.maximumSize.height) * scale
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let jpegData = try NEFParser.extractEmbeddedJPEG(at: fileURL)
-                guard let image = NSImage(data: jpegData) else {
-                    handler(nil, CocoaError(.fileReadCorruptFile))
-                    return
-                }
-                let reply = QLThumbnailReply(contextSize: maxSize) { context in
-                    let rect = CGRect(origin: .zero, size: maxSize)
-                    if let cgImage = image.cgImage(forProposedRect: nil,
-                                                   context: nil,
-                                                   hints: nil) {
-                        context.draw(cgImage, in: rect)
-                    }
-                    return true
-                }
-                handler(reply, nil)
-            } catch {
-                // Fallback: system Core Image RAW decode (works for lossless NEF)
-                self.fallbackCoreImageThumbnail(url: fileURL, size: maxSize,
-                                                handler: handler)
+        logger.info("provideThumbnail called for \(fileURL.lastPathComponent) maxSize=\(request.maximumSize.width)x\(request.maximumSize.height) scale=\(scale)")
+
+        do {
+            let jpegData = try NEFParser.extractEmbeddedJPEG(at: fileURL)
+            logger.info("Extracted JPEG: \(jpegData.count) bytes")
+
+            guard let imageSource = CGImageSourceCreateWithData(jpegData as CFData, nil),
+                  let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+            else {
+                logger.error("Failed to create CGImage from JPEG data")
+                handler(nil, CocoaError(.fileReadCorruptFile))
+                return
             }
+
+            let imgW = CGFloat(cgImage.width)
+            let imgH = CGFloat(cgImage.height)
+            let aspect = imgW / imgH
+
+            // Compute the thumbnail size that fits within maximumSize while
+            // preserving aspect ratio.
+            let thumbSize: CGSize
+            if aspect >= 1.0 {
+                // Landscape
+                let w = min(request.maximumSize.width, imgW / scale)
+                thumbSize = CGSize(width: w, height: w / aspect)
+            } else {
+                // Portrait
+                let h = min(request.maximumSize.height, imgH / scale)
+                thumbSize = CGSize(width: h * aspect, height: h)
+            }
+
+            logger.info("Thumbnail contextSize=\(thumbSize.width)x\(thumbSize.height)")
+
+            let reply = QLThumbnailReply(contextSize: thumbSize) { context in
+                let rect = CGRect(origin: .zero, size: thumbSize)
+                context.draw(cgImage, in: rect)
+                return true
+            }
+            handler(reply, nil)
+
+        } catch {
+            logger.error("NEFParser failed: \(error.localizedDescription), trying fallback")
+            self.fallbackCoreImageThumbnail(url: fileURL, size: request.maximumSize,
+                                            handler: handler)
         }
     }
 
