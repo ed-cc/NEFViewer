@@ -34,15 +34,11 @@ class ThumbnailProvider: QLThumbnailProvider {
             let imgH = CGFloat(cgImage.height)
             let aspect = imgW / imgH
 
-            // Compute the thumbnail size that fits within maximumSize while
-            // preserving aspect ratio.
             let thumbSize: CGSize
             if aspect >= 1.0 {
-                // Landscape
                 let w = min(request.maximumSize.width, imgW / scale)
                 thumbSize = CGSize(width: w, height: w / aspect)
             } else {
-                // Portrait
                 let h = min(request.maximumSize.height, imgH / scale)
                 thumbSize = CGSize(width: h * aspect, height: h)
             }
@@ -50,8 +46,10 @@ class ThumbnailProvider: QLThumbnailProvider {
             logger.info("Thumbnail contextSize=\(thumbSize.width)x\(thumbSize.height)")
 
             let reply = QLThumbnailReply(contextSize: thumbSize) { context in
-                let rect = CGRect(origin: .zero, size: thumbSize)
-                context.draw(cgImage, in: rect)
+                let pixelRect = CGRect(origin: .zero,
+                                       size: CGSize(width: thumbSize.width * scale,
+                                                    height: thumbSize.height * scale))
+                context.draw(cgImage, in: pixelRect)
                 return true
             }
             handler(reply, nil)
