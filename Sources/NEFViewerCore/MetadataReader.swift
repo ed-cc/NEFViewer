@@ -27,9 +27,11 @@ public struct NEFMetadata: Equatable {
         guard exposureTimeRational.denominator != 0 else { return "–" }
         let n = exposureTimeRational.numerator
         let d = exposureTimeRational.denominator
-        if n == 1 { return "1/\(d)s" }
-        let seconds = Double(n) / Double(d)
-        return String(format: "%.4fs", seconds)
+        var result = "-"
+        if n > d { result = "\(n/d)" }
+        else if n == 1 { result = "1/\(d)" }
+        else { result = "\(1)/\(d/n)"}
+        return result + " s"
     }
 
     public var fNumberString: String {

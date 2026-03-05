@@ -56,14 +56,14 @@ Apple's built-in RAW decoder is used by Finder, Preview, and Photos. It requires
 
 Nikon offers a free-of-charge Image SDK available via application at `sdk.nikonimaging.com`. Notably, the SDK does **not expose raw sensor data** — it delivers a pre-processed, demosaiced bitmap image (essentially Nikon's own conversion). This makes it unsuitable for photographers who need full raw processing control, but perfectly adequate for generating **previews and Finder icons**. It supports all NEF formats including HE/HE★ and is the approach used by Affinity Photo 2.6.
 
-**Pros**: Supports HE/HE★, free to obtain, covers all Nikon cameras  
+**Pros**: Supports HE/HE★, free to obtain, covers all Nikon cameras
 **Cons**: Requires an application process, no open redistribution, not open source, delivers processed image rather than raw data
 
 ### 2.3 intoPIX TICO-RAW SDK
 
 The underlying technology behind HE/HE★. Available for licensing from intoPIX (`intopix.com`). This is a commercial SDK requiring a paid license agreement. It provides full decode access to the TICO-RAW compressed sensor data. Used by DxO, Topaz, and others. ARM-native support was added in September 2022.
 
-**Pros**: Full HE/HE★ decode capability, ARM-native  
+**Pros**: Full HE/HE★ decode capability, ARM-native
 **Cons**: Commercial licensing cost, adds dependency complexity
 
 ### 2.4 Adobe DNG SDK
@@ -135,27 +135,6 @@ The embedded JPEG approach described in Section 2.6 is the direct answer to this
 
 Modern SMB implementations (SMB 2.0+) on macOS support random-access reads at arbitrary offsets, so this does not require downloading the full file. The OS will issue ranged read requests to the server. The savings are substantial: approximately **1–2 MB transferred instead of 15–50 MB per file**.
 
-### 4.3 Better Alternative: Sidecar Thumbnail Cache
-
-For production workflows, the gold-standard approach used by professional tools like Photo Mechanic is to maintain a local thumbnail cache:
-
-- On first access (or during an explicit ingest step), generate thumbnails for all files and store them locally (e.g., in `~/Library/Caches/com.yourapp.nefviewer/thumbnails/`)
-- Key the cache by file path + modification date
-- Finder icons are served entirely from the local cache on subsequent accesses — zero network traffic
-
-This is the most performant solution and eliminates all SMB bandwidth for icons. The tradeoff is a one-time cost when files first appear, which can be done in the background or triggered manually ("Generate Previews" menu action).
-
-### 4.4 Comparison of Approaches
-
-| Approach | Network reads per icon | Complexity | Quality |
-|---|---|---|---|
-| Full RAW decode (default naive) | 15–50 MB | Low | Highest |
-| Embedded JPEG extraction (ranged read) | 1–2 MB | Medium | High (camera-processed) |
-| Local sidecar thumbnail cache | 0 MB (after first run) | High | High (configurable) |
-| XMP/sidecar thumbnail (Lightroom-style) | 0 MB (if present) | Medium | High |
-
-**Recommended approach**: Combine embedded JPEG extraction (for immediate, on-demand display) with a background local cache builder (for zero-network subsequent accesses).
-
 ---
 
 ## 5. Implementation Plan
@@ -191,13 +170,13 @@ struct NEFEmbeddedJPEG {
 }
 
 class NEFParser {
-    
+
     enum NEFError: Error {
         case notTIFF
         case jpgFromRawNotFound
         case readError
     }
-    
+
     /// Parses NEF IFD chain to locate the JpgFromRaw embedded JPEG.
     /// Only reads the first ~64 KB of the file (IFD metadata).
     /// Returns byte offset and length to enable a ranged read.
@@ -206,31 +185,31 @@ class NEFParser {
             throw NEFError.readError
         }
         defer { handle.closeFile() }
-        
+
         // Read TIFF header (8 bytes)
         let header = handle.readData(ofLength: 8)
         guard header.count == 8 else { throw NEFError.notTIFF }
-        
+
         // Determine byte order
         let byteOrder = header.withUnsafeBytes { ptr -> UInt16 in
             ptr.load(as: UInt16.self)
         }
         let isLittleEndian = byteOrder == 0x4949 // "II"
-        
+
         // Verify TIFF magic number (42)
         let magic = readUInt16(data: header, offset: 2, littleEndian: isLittleEndian)
         guard magic == 42 else { throw NEFError.notTIFF }
-        
+
         // First IFD offset
         let ifdOffset = readUInt32(data: header, offset: 4, littleEndian: isLittleEndian)
-        
+
         // Read IFD chain to find SubIFD tag (0x014a)
         // Then read SubIFD#1 to find JpgFromRawStart (0x0201) and JpgFromRawLength (0x0202)
-        return try parseIFD(handle: handle, 
-                           offset: ifdOffset, 
+        return try parseIFD(handle: handle,
+                           offset: ifdOffset,
                            littleEndian: isLittleEndian)
     }
-    
+
     /// Extract the embedded JPEG bytes using a ranged read.
     /// This is the key bandwidth-optimisation — only these bytes are read.
     static func extractEmbeddedJPEG(at url: URL) throws -> Data {
@@ -246,7 +225,7 @@ class NEFParser {
         }
         return jpegData
     }
-    
+
     // ... TIFF parsing helpers (readUInt16, readUInt32, parseIFD, parseSubIFD)
 }
 ```
@@ -270,21 +249,21 @@ import AppKit
 import NEFViewerCore
 
 class ThumbnailProvider: QLThumbnailProvider {
-    
+
     override func provideThumbnail(
         for request: QLFileThumbnailRequest,
         _ handler: @escaping (QLThumbnailReply?, Error?) -> Void
     ) {
         let fileURL = request.fileURL
         let maxSize = request.maximumSize
-        
+
         // Step 1: Check local thumbnail cache first (zero network traffic)
-        if let cached = ThumbnailCache.shared.thumbnail(for: fileURL, 
+        if let cached = ThumbnailCache.shared.thumbnail(for: fileURL,
                                                          size: maxSize) {
             handler(QLThumbnailReply(imageFileURL: cached), nil)
             return
         }
-        
+
         // Step 2: Extract embedded JPEG (ranged read — minimal network traffic)
         DispatchQueue.global(qos: .userInitiated).async {
             do {
@@ -293,32 +272,32 @@ class ThumbnailProvider: QLThumbnailProvider {
                     handler(nil, ThumbnailError.decodeFailure)
                     return
                 }
-                
+
                 // Scale to requested size
                 let thumbnail = image.scaled(toFit: maxSize)
-                
+
                 // Cache for future zero-network access
                 ThumbnailCache.shared.store(thumbnail, for: fileURL, size: maxSize)
-                
+
                 let reply = QLThumbnailReply(contextSize: maxSize) { context in
                     thumbnail.draw(in: CGRect(origin: .zero, size: maxSize))
                     return true
                 }
                 handler(reply, nil)
-                
+
             } catch {
                 // Fallback: try Core Image RAW decode (works for lossless NEF)
                 self.fallbackCoreImageThumbnail(
-                    url: fileURL, 
-                    size: maxSize, 
+                    url: fileURL,
+                    size: maxSize,
                     handler: handler
                 )
             }
         }
     }
-    
+
     private func fallbackCoreImageThumbnail(
-        url: URL, 
+        url: URL,
         size: CGSize,
         handler: @escaping (QLThumbnailReply?, Error?) -> Void
     ) {
@@ -375,14 +354,14 @@ import QuickLook
 import NEFViewerCore
 
 class PreviewViewController: NSViewController, QLPreviewingController {
-    
+
     @IBOutlet weak var imageView: NSImageView!
     @IBOutlet weak var loadingIndicator: NSProgressIndicator!
     @IBOutlet weak var metadataLabel: NSTextField!
-    
+
     func preparePreviewOfFile(at url: URL, completionHandler handler: @escaping (Error?) -> Void) {
         loadingIndicator.startAnimation(nil)
-        
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 // For preview, use embedded JPEG for speed
@@ -390,7 +369,7 @@ class PreviewViewController: NSViewController, QLPreviewingController {
                 let jpegData = try NEFParser.extractEmbeddedJPEG(at: url)
                 let image = NSImage(data: jpegData)
                 let metadata = try MetadataReader.read(from: url)
-                
+
                 DispatchQueue.main.async {
                     self.imageView.image = image
                     self.metadataLabel.stringValue = metadata.summaryString
@@ -409,77 +388,6 @@ class PreviewViewController: NSViewController, QLPreviewingController {
 
 For a more complete viewer (full raw decode with colour science), Phase 3 can be extended with a `CIRAWFilter`-based decode path for lossless NEFs, and a Nikon SDK / intoPIX SDK path for HE/HE★ files.
 
-### 5.5 Phase 4: Local Thumbnail Cache
-
-**File**: `Sources/NEFViewerCore/ThumbnailCache.swift`
-
-```swift
-import Foundation
-import AppKit
-
-final class ThumbnailCache {
-    static let shared = ThumbnailCache()
-    
-    private let cacheDirectory: URL
-    private let maxCacheSizeBytes: Int = 500 * 1024 * 1024 // 500 MB
-    
-    init() {
-        let appSupport = FileManager.default.urls(
-            for: .cachesDirectory, 
-            in: .userDomainMask
-        ).first!
-        cacheDirectory = appSupport.appendingPathComponent(
-            "com.yourapp.nefviewer/thumbnails"
-        )
-        try? FileManager.default.createDirectory(
-            at: cacheDirectory, 
-            withIntermediateDirectories: true
-        )
-    }
-    
-    func thumbnail(for url: URL, size: CGSize) -> URL? {
-        let cacheKey = cacheKeyFor(url: url, size: size)
-        let cacheURL = cacheDirectory.appendingPathComponent(cacheKey + ".jpg")
-        
-        // Validate cache entry against file modification date
-        guard FileManager.default.fileExists(atPath: cacheURL.path),
-              let sourceAttrs = try? FileManager.default.attributesOfItem(atPath: url.path),
-              let cacheAttrs = try? FileManager.default.attributesOfItem(atPath: cacheURL.path),
-              let sourceMod = sourceAttrs[.modificationDate] as? Date,
-              let cacheMod = cacheAttrs[.modificationDate] as? Date,
-              cacheMod > sourceMod
-        else { return nil }
-        
-        return cacheURL
-    }
-    
-    func store(_ image: NSImage, for url: URL, size: CGSize) {
-        let cacheKey = cacheKeyFor(url: url, size: size)
-        let cacheURL = cacheDirectory.appendingPathComponent(cacheKey + ".jpg")
-        
-        guard let tiff = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let jpegData = bitmap.representation(
-                  using: .jpeg, 
-                  properties: [.compressionFactor: 0.85]
-              )
-        else { return }
-        
-        try? jpegData.write(to: cacheURL)
-    }
-    
-    private func cacheKeyFor(url: URL, size: CGSize) -> String {
-        // Hash of path + file size + modification date + thumbnail size
-        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
-        let fileSize = (attrs?[.size] as? Int) ?? 0
-        let modDate = (attrs?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
-        let raw = "\(url.path)_\(fileSize)_\(modDate)_\(Int(size.width))x\(Int(size.height))"
-        return raw.data(using: .utf8)!.base64EncodedString()
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "+", with: "-")
-    }
-}
-```
 
 ### 5.6 Phase 5: Main Application UI
 
@@ -497,13 +405,13 @@ The container application (required for extension registration) doubles as a ful
 
 Based on the research above, the recommended approach for handling all Z6III NEF variants is a tiered strategy:
 
-**Tier 1 — Icon/Thumbnail generation (all compression modes)**  
+**Tier 1 — Icon/Thumbnail generation (all compression modes)**
 Use the embedded JPEG ranged-read technique. Works for lossless, HE★, and HE. No SDK required. Minimal bandwidth (~1–2 MB per file). Fast (pure Swift TIFF parsing + JPEG decode). This handles 100% of files regardless of compression mode.
 
-**Tier 2 — Full preview, lossless NEF only**  
+**Tier 2 — Full preview, lossless NEF only**
 Use `CIRAWFilter` (Core Image RAW) for lossless compressed NEF files. This is the highest-quality path for full-resolution viewing and requires no licensing. Hardware-accelerated on Apple Silicon.
 
-**Tier 3 — Full preview, HE/HE★ NEF**  
+**Tier 3 — Full preview, HE/HE★ NEF**
 Two options, in order of preference:
 - Option A: **Nikon Image SDK** — free, requires application/approval, delivers processed image (not raw data). Suitable for viewing. Used by Affinity Photo 2.6.
 - Option B: **intoPIX TICO-RAW SDK** — commercial license required, provides access to compressed sensor data. Suitable if full raw editing capability is needed.
@@ -537,9 +445,9 @@ NEFViewer/
     └── Info.plist
 ```
 
-**Language**: Swift 5.9+  
-**Minimum deployment**: macOS 13 Ventura (for `CIRAWFilter` API stability)  
-**UI framework**: SwiftUI (main app), AppKit where required by extension APIs  
+**Language**: Swift 5.9+
+**Minimum deployment**: macOS 13 Ventura (for `CIRAWFilter` API stability)
+**UI framework**: SwiftUI (main app), AppKit where required by extension APIs
 **No third-party dependencies** required for Phase 1 and 2 (pure Swift + system frameworks)
 
 ---

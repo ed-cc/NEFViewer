@@ -4,6 +4,21 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>NEFViewer</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Nikon NEF Raw Image</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.nikon.raw-image</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
@@ -18,23 +33,19 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<!-- Export com.nikon.raw-image so this app is the authoritative owner of
-	     the UTI. Using UTExportedTypeDeclarations (not Imported) causes macOS
-	     Launch Services to prefer this app's Quick Look extensions over the
-	     system-default RAW codec handler when resolving .nef files. -->
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>com.nikon.raw-image</string>
-			<key>UTTypeDescription</key>
-			<string>Nikon NEF Raw Image</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>com.apple.raw-image</string>
 				<string>public.image</string>
 				<string>public.data</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>Nikon NEF Raw Image</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.nikon.raw-image</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
@@ -45,23 +56,6 @@
 				<key>public.mime-type</key>
 				<string>image/x-nikon-nef</string>
 			</dict>
-		</dict>
-	</array>
-	<!-- Register NEF as an openable document type so Launch Services builds
-	     the full app→UTI association needed for QL extension dispatch. -->
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>Nikon NEF Raw Image</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>com.nikon.raw-image</string>
-			</array>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSHandlerRank</key>
-			<string>Owner</string>
 		</dict>
 	</array>
 </dict>
