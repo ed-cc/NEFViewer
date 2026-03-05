@@ -206,7 +206,7 @@ final class MetadataReaderTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let meta = try MetadataReader.read(from: url)
-        XCTAssertEqual(meta.exposureTimeString, "1/250s")
+        XCTAssertEqual(meta.exposureTimeString, "1/250 s")
     }
 
     func test_fNumberString() throws {
