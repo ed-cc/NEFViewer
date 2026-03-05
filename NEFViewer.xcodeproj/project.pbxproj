@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		6991BA712F59E71E002BA9BF /* CenteringClipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6991BA702F59E718002BA9BF /* CenteringClipView.swift */; };
+		6991BA762F5A3708002BA9BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6991BA752F5A3708002BA9BF /* Assets.xcassets */; };
 		AA0000000000000000000040 /* NEFViewerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000010 /* NEFViewerApp.swift */; };
 		AA0000000000000000000041 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000011 /* ContentView.swift */; };
 		AA0000000000000000000042 /* NEFViewerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AA000000000000000000007D /* NEFViewerCore */; };
@@ -56,6 +57,7 @@
 
 /* Begin PBXFileReference section */
 		6991BA702F59E718002BA9BF /* CenteringClipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CenteringClipView.swift; sourceTree = "<group>"; };
+		6991BA752F5A3708002BA9BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000000010 /* NEFViewerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NEFViewerApp.swift; sourceTree = "<group>"; };
 		AA0000000000000000000011 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -105,6 +107,7 @@
 		AA0000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+				6991BA752F5A3708002BA9BF /* Assets.xcassets */,
 				AA0000000000000000000030 /* NEFViewer */,
 				AA0000000000000000000031 /* ThumbnailExtension */,
 				AA0000000000000000000032 /* PreviewExtension */,
@@ -272,6 +275,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6991BA762F5A3708002BA9BF /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -451,6 +455,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = NEFViewer/NEFViewer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -458,6 +463,8 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = NEFViewer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "NEF Viewer";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -475,6 +482,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = NEFViewer/NEFViewer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -482,6 +490,8 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = NEFViewer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "NEF Viewer";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
