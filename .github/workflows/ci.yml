@@ -3,10 +3,11 @@ name: CI
 on:
   push:
     branches: ["**"]
+    tags: ["v*"]
   pull_request:
 
 jobs:
-  # ── macOS: full test suite (NEFParser + MetadataReader + ThumbnailCache) ──
+  # ── macOS: full test suite + debug build ─────────────────────────────────
   test-macos:
     name: Tests · macOS
     runs-on: macos-14
@@ -28,18 +29,48 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             | grep -E '^(Build|error:|warning:|CompileSwift|Ld )' || true
 
-  # ── Linux: Foundation-only tests (NEFParser + MetadataReader) ─────────────
-  # ThumbnailCache is guarded by #if canImport(AppKit) and is skipped here.
-  test-linux:
-    name: Tests · Linux
-    runs-on: ubuntu-latest
+  # ── macOS: release archive (main branch and version tags only) ───────────
+  release-macos:
+    name: Release Build · macOS
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: test-macos
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "5.10"
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
-      - name: Run tests
-        run: swift test --parallel
+      - name: Archive app
+        run: |
+          xcodebuild archive \
+            -project NEFViewer.xcodeproj \
+            -scheme NEFViewer \
+            -configuration Release \
+            -archivePath build/NEFViewer.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Create DMG
+        run: |
+          cp -r build/NEFViewer.xcarchive/Products/Applications/NEFViewer.app build/NEFViewer.app
+          hdiutil create -volname NEFViewer \
+            -srcfolder build/NEFViewer.app \
+            -ov -format UDZO \
+            build/NEFViewer-macOS.dmg
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEFViewer-macOS
+          path: build/NEFViewer-macOS.dmg
+          retention-days: 30
+
+      # Publish a GitHub Release when a version tag (v*) is pushed
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/NEFViewer-macOS.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
